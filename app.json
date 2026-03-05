@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "orientation-lock-repro",
+    "slug": "orientation-lock-repro",
+    "version": "1.0.0",
+    "scheme": "orientation-lock-repro",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "com.repro.orientationlock",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.repro.orientationlock"
+    },
+    "plugins": ["expo-router"]
+  }
+}
