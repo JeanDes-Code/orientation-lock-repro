@@ -2,7 +2,7 @@
 
 ## Bug Description
 
-After upgrading to Expo SDK 55 (React Native 0.83.2, react-native-screens ~4.11), calling `ScreenOrientation.lockAsync(PORTRAIT_UP)` after navigating back from a landscape-locked screen is **silently ignored** on iOS. The screen stays stuck in landscape.
+Linked to [issue 43692](https://github.com/expo/expo/issues/43692)
 
 ## Root Cause (suspected)
 
