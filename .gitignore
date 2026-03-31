@@ -1,1 +1,7 @@
+node_modules/
+ios/
+android/
+.expo/
+*.tsbuildinfo
+package-lock.json
 /ISSUE_DRAFT.md

@@ -1,65 +1,70 @@
-import * as ScreenOrientation from 'expo-screen-orientation';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Button, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Button, ScrollView, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<'A' | 'B' | null>(null);
-  const modeRef = useRef<'A' | 'B' | null>(null);
+  const [log, setLog] = useState<string[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (modeRef.current === 'B') {
-        // Option B: Home enforces portrait on focus
-        console.log('[Home] Focused (Option B) — locking to PORTRAIT_UP');
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      } else if (modeRef.current === 'A') {
-        // Option A: Home does NOT lock — relies on play-a unlocking on blur
-        console.log('[Home] Focused (Option A) — no lock applied');
-      }
-    }, [])
-  );
-
-  const goA = () => {
-    modeRef.current = 'A';
-    setMode('A');
-    router.push('/play-a');
-  };
-
-  const goB = () => {
-    modeRef.current = 'B';
-    setMode('B');
-    router.push('/play-b');
-  };
+  const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 20));
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 30 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Orientation Lock Repro</Text>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 24, padding: 20 }}>
+      <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Orientation Lock Repro</Text>
+      <Text style={{ color: '#888', textAlign: 'center', fontSize: 12 }}>
+        expo-dev-client + react-native-screens 4.23 + expo-screen-orientation 55.0.9
+      </Text>
 
-      <View style={{ gap: 8, paddingHorizontal: 20, alignItems: 'center' }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>Option A — passive portrait</Text>
-        <Text style={{ textAlign: 'center' }}>
-          Home has NO orientation lock.{'\n'}
-          Landscape screen locks + unlocks on blur.
+      <View style={{ gap: 6, alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, fontWeight: '600' }}>Option C — declarative (the bug)</Text>
+        <Text style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
+          Uses Stack.Screen orientation='landscape_right'.{'\n'}
+          Root Stack defaults to orientation='portrait'.{'\n'}
+          No lockAsync() — purely declarative.
         </Text>
-        <Button title="Go to Landscape (Option A)" onPress={goA} />
+        <Button title="Go to Landscape (Option C)" onPress={() => {
+          addLog('Navigate → play-c (landscape_right)');
+          router.push('/play-c');
+        }} />
+        <Text style={{ fontSize: 11, color: '#c00', textAlign: 'center' }}>
+          BUG: First nav locks landscape. Back does NOT restore portrait.{'\n'}
+          Second nav to landscape also fails.
+        </Text>
       </View>
 
-      <View style={{ height: 1, width: '80%', backgroundColor: '#ccc' }} />
+      <View style={{ height: 1, width: '80%', backgroundColor: '#ddd' }} />
 
-      <View style={{ gap: 8, paddingHorizontal: 20, alignItems: 'center' }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>Option B — enforced portrait</Text>
-        <Text style={{ textAlign: 'center' }}>
-          Home locks PORTRAIT_UP on focus.{'\n'}
-          Landscape screen locks LANDSCAPE_RIGHT on focus.
+      <View style={{ gap: 6, alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, fontWeight: '600' }}>Option A — lockAsync passive</Text>
+        <Text style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
+          Landscape locks + unlocks on blur.{'\n'}
+          Home has NO lock.
         </Text>
-        <Button title="Go to Landscape (Option B)" onPress={goB} />
+        <Button title="Go to Landscape (Option A)" onPress={() => {
+          addLog('Navigate → play-a');
+          router.push('/play-a');
+        }} />
       </View>
 
-      {mode && (
-        <Text style={{ color: '#888' }}>Last used: Option {mode}</Text>
+      <View style={{ height: 1, width: '80%', backgroundColor: '#ddd' }} />
+
+      <View style={{ gap: 6, alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, fontWeight: '600' }}>Option B — lockAsync enforced</Text>
+        <Text style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
+          Both screens lock explicitly.
+        </Text>
+        <Button title="Go to Landscape (Option B)" onPress={() => {
+          addLog('Navigate → play-b');
+          router.push('/play-b');
+        }} />
+      </View>
+
+      {log.length > 0 && (
+        <View style={{ width: '100%', padding: 10, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
+          <Text style={{ fontWeight: '600', marginBottom: 4 }}>Log:</Text>
+          {log.map((l, i) => <Text key={i} style={{ fontSize: 11, color: '#666' }}>{l}</Text>)}
+        </View>
       )}
-    </View>
+    </ScrollView>
   );
 }

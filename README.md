@@ -1,41 +1,53 @@
-# expo-screen-orientation: lockAsync ignored after landscape→portrait navigation
+# expo-screen-orientation: declarative orientation locking broken with expo-dev-client on iOS 16+
 
 ## Bug Description
 
 Linked to [issue 43692](https://github.com/expo/expo/issues/43692)
 
-## Root Cause (suspected)
+Declarative screen orientation via `Stack.Screen options={{ orientation: 'landscape_right' }}` is broken when `expo-dev-client` is installed. Two interacting bugs prevent rotation:
 
-In `expo-screen-orientation`'s `ScreenOrientationRegistry.swift`, the iOS 16+ code path uses `requestGeometryUpdate(.iOS(interfaceOrientations:))` which is a *request* that iOS can silently ignore — and it does during/after `react-native-screens` ViewController transitions.
+1. **`expo-screen-orientation@55.0.9`** only checks `self` for react-native-screens VCs, missing them behind `DevLauncherViewController`
+2. **`react-native-screens@4.23.0`** uses stale `windowScene.interfaceOrientation` to skip rotation, and `requestGeometryUpdate` fails silently during transitions
 
-The pre-iOS 16 path uses the more forceful `UIDevice.current.setValue(_:forKey: "orientation")` which does not have this problem.
+The `lockAsync()` imperative approach is also affected.
+
+See [ISSUE_DRAFT.md](./ISSUE_DRAFT.md) for the full root cause analysis with native debug logs.
 
 ## Steps to Reproduce
 
 ```bash
-cd orientation-lock-repro
 npm install
+npx expo prebuild --clean
 npx expo run:ios
 ```
 
-1. App opens on **Home** tab (portrait)
-2. Tap **"Go to Landscape Screen"** — screen rotates to landscape
-3. Tap **"Go Back"** — navigates back to Home tab
-4. **BUG**: Screen stays in landscape despite `lockAsync(PORTRAIT_UP)` being called
+1. Connect to dev server via the Expo dev launcher
+2. Tap **"Go to Landscape (Option C)"** — may or may not rotate to landscape
+3. Tap **"Go Back"** — **BUG:** screen stays in landscape
+4. Tap **"Go to Landscape (Option C)"** again — **BUG:** landscape also fails
 
-## Expected Behavior
+## Workaround
 
-Screen should rotate back to portrait when returning to the Home tab.
+Two patches in `patches/` fix both issues:
 
-## Actual Behavior
+- `expo-screen-orientation+55.0.9.patch` — child VC traversal for DevLauncherViewController
+- `react-native-screens+4.23.0.patch` — always call `requestGeometryUpdate` with fallback to `UIDevice setValue:orientation` on error
 
-Screen stays stuck in landscape. Console shows the `lockAsync` call is made but has no effect.
+The patches are auto-applied via `postinstall`. To test **with** the fix:
+
+```bash
+npm install   # patches applied
+npx expo prebuild --clean
+npx expo run:ios
+```
+
+To test **without** the fix (reproduce the bug), temporarily remove the `patches/` directory before prebuild.
 
 ## Environment
 
-- Expo SDK: 55
-- expo-screen-orientation: ~55.0.8
-- React Native: 0.83.2
-- react-native-screens: ~4.11
-- iOS: 16+ (tested on iOS 18 simulator)
-- Device: iPhone simulator and physical device
+- Expo SDK 55 (`expo@55.0.9`)
+- `expo-dev-client@55.0.19`
+- `expo-screen-orientation@55.0.9`
+- `react-native@0.83.4`
+- `react-native-screens@4.23.0`
+- iOS 16+ (tested on iOS 26.2 simulator, iOS 18 physical device)

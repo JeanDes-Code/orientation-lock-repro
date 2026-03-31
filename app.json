@@ -5,13 +5,24 @@
     "version": "1.0.0",
     "scheme": "orientation-lock-repro",
     "platforms": ["ios", "android"],
+    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.repro.orientationlock",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "requireFullScreen": true
     },
     "android": {
       "package": "com.repro.orientationlock"
     },
-    "plugins": ["expo-router"]
+    "orientation": "default",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "DEFAULT"
+        }
+      ]
+    ]
   }
 }

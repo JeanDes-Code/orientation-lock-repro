@@ -1,0 +1,52 @@
+diff --git a/node_modules/expo-screen-orientation/ios/ScreenOrientationViewController.swift b/node_modules/expo-screen-orientation/ios/ScreenOrientationViewController.swift
+index 2a99cce4f19b0b5d2deac3f28a2a429172c50a51..7947cdb5b5ba0c62262b59c7f262b091756e8dce 100644
+--- a/node_modules/expo-screen-orientation/ios/ScreenOrientationViewController.swift
++++ b/node_modules/expo-screen-orientation/ios/ScreenOrientationViewController.swift
+@@ -64,9 +64,16 @@ class ScreenOrientationViewController: UIViewController {
+   }
+ 
+   override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+-    guard !shouldUseRNScreenOrientation() else {
+-      return super.supportedInterfaceOrientations
++    if let vc = vcWithRNScreenOrientation() {
++      // react-native-screens has per-screen orientation set.
++      // If the VC is self, use super to avoid infinite recursion (self.supportedInterfaceOrientations
++      // would re-enter this getter). If it's a child VC, call its supportedInterfaceOrientations
++      // directly — RNScreens has swizzled it to resolve the active screen's orientation mask.
++      return vc === self ? super.supportedInterfaceOrientations : vc.supportedInterfaceOrientations
+     }
++
++    // No react-native-screens orientation — use expo-screen-orientation's registry mask
++    // (set via lockAsync) or the default from Info.plist.
+     let mask = screenOrientationRegistry.requiredOrientationMask()
+     return !mask.isEmpty ? mask : defaultOrientationMask
+   }
+@@ -92,12 +99,24 @@ class ScreenOrientationViewController: UIViewController {
+     })
+   }
+ 
+-  private func shouldUseRNScreenOrientation() -> Bool {
+-    // If RNScreens has set the orientation we want to use it instead of our orientation
++  /// Finds the VC whose subtree has a react-native-screens screen with orientation set.
++  /// Checks self first (the common case), then each child VC. The child-level search handles
++  /// cases where an intermediate VC (e.g. DevLauncherViewController from expo-dev-client)
++  /// sits between this root VC and the RNSNavigationController, blocking the single-level
++  /// traversal that RNScreens' shouldAskScreensForScreenOrientation performs.
++  private func vcWithRNScreenOrientation() -> UIViewController? {
+     guard let screenWindowTraitsClass = NSClassFromString("RNSScreenWindowTraits") else {
+-      return false
++      return nil
++    }
++    if screenWindowTraitsClass.shouldAskScreensForScreenOrientation?(in: self) ?? false {
++      return self
++    }
++    for child in children {
++      if screenWindowTraitsClass.shouldAskScreensForScreenOrientation?(in: child) ?? false {
++        return child
++      }
+     }
+-    return screenWindowTraitsClass.shouldAskScreensForScreenOrientation?(in: self) ?? false
++    return nil
+   }
+ 
+   /**
