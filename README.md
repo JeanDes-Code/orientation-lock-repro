@@ -11,7 +11,7 @@ Declarative screen orientation via `Stack.Screen options={{ orientation: 'landsc
 
 The `lockAsync()` imperative approach is also affected.
 
-See [ISSUE_DRAFT.md](./ISSUE_DRAFT.md) for the full root cause analysis with native debug logs.
+The full root cause analysis, with the native debug logs, is in [expo/expo#43692](https://github.com/expo/expo/issues/43692).
 
 ## Steps to Reproduce
 
